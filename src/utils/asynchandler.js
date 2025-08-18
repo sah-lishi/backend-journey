@@ -1,10 +1,11 @@
+// export const asynchandler = (fn) => (req, res, next) => {
+//     Promise.resolve(fn(req, res, next)).catch(next)
+// }
 const asynchandler = (requestHandler) => {
     return (req, res, next) =>{
-        Promise.resolve(requestHandler).catch((err) => next(err))
+        Promise.resolve(requestHandler(req, res, next)).catch((err) => next(err))
     }
 }
-
-
 
 export{ asynchandler }
 

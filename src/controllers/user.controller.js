@@ -90,9 +90,11 @@ const loginUser = asynchandler(async (req, res) => {
     // send cookie
 
     const {email, username, password} = req.body
+
     if (!(username || email)) {
         throw new apiError(400, "Username or email is required")
     }
+
     const user = await User.findOne({
         $or: [{username}, {email}]//find user on the basis of username or email
     })
@@ -109,7 +111,7 @@ const loginUser = asynchandler(async (req, res) => {
     // destructure
     const {accessToken, refreshToken} = await generateAccessAndRefreshToken(user._id)
 
-    const loggedInUser = await User.findById(user._id).select("-password -refreshToken")
+    const loggedInUser = await User.findById(user._id).select("-password -refreshToken") // returns user document with that id
 
     const options = {
         httpOnly: true,
@@ -161,9 +163,11 @@ const refreshAccessToken = asynchandler(async(req, res) => {
     }
 
     try {
-        const decodedToken = jwt.verify(
+        const decodedToken = jwt
+        .verify(
             incomingRefreshToken, 
-            process.env.REFRESH_TOKEN_SECRET)
+            process.env.REFRESH_TOKEN_SECRET
+        )
     
         const user = await User.findById(decodedToken?._id)    
     
@@ -185,7 +189,7 @@ const refreshAccessToken = asynchandler(async(req, res) => {
         return res
         .status(200)
         .cookie("accessToken", accessToken)
-        .cookie("refreshToken", refreshToken)
+        .cookie("refreshToken", newrefreshToken)
         .json(
             new apiResponse(
                 200,

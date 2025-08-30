@@ -19,14 +19,25 @@ const publishAVideo = asynchandler(async (req, res) => {
     const thumbnail = req.files["thumbnail"]?.[0]?.path
 
     if (!videoFile) {
-        throw new apiError(400, "No video file has been attached")
+        throw new apiError(400, "No videoFile file has been attached")
+    }
+
+    if (!thumbnail) {
+        throw new apiError(400, "No thumbnail file has been attached")
     }
 
     const duration = await getVideoDurationInSeconds(videoFile)
 
+    const uploadVideo = await uploadOnCloudinary(videoFile)
+    const uploadThumbnail = await uploadOnCloudinary(thumbnail)
+
+    if(!(uploadVideo || uploadThumbnail)) {
+        return new apiError(500, "Video not uploaded on cloudinary")
+    }
+
     const newVideo =new Video({
-        videoFile,
-        thumbnail, 
+        videoFile: uploadVideo.url,
+        thumbnail: uploadThumbnail.url, 
         title, 
         description, 
         duration: duration,
@@ -38,7 +49,7 @@ const publishAVideo = asynchandler(async (req, res) => {
 
     return res
     .status(200)
-    .json(new apiResponse(200, {}, "Video published successfully"))
+    .json(new apiResponse(200, newVideo, "Video published successfully"))
 })
 
 const getVideoById = asynchandler(async (req, res) => {
@@ -47,9 +58,47 @@ const getVideoById = asynchandler(async (req, res) => {
 })
 
 const updateVideo = asynchandler(async (req, res) => {
-    const { videoId } = req.params
     //TODO: update video details like title, description, thumbnail
+    const { videoId } = req.params
+    const {title, description} = req.body
+    const thumbnail = req.file["thumbnail"]?.[0]?.path || null
+                       
+    if (!title && !description && !thumbnail) {
+        throw new apiError(400, "At least one field (title, description, thumbnail) must be provided")
+    }
 
+    let updatedFields = {}
+    if (title) {
+        updatedFields.title = title
+    }
+    if (description) {
+        updatedFields.description = description
+    }
+    if(thumbnail){
+        const uploadThumbnail = await uploadOnCloudinary(thumbnail)
+
+        if (!uploadThumbnail) {
+            throw new apiError(500, "Thumbnail not uploaded on cloudinary")
+        }
+        updatedFields.thumbnail = uploadThumbnail.url
+    }
+    
+    const updateVideo = await Video.findByIdAndUpdate(
+        videoId, updatedFields, {new: true})
+    
+    if (!updateVideo) {
+        throw new apiError(404, "Video not found")
+    }    
+    // const video = await Video.findById(videoId)
+    // Video.title = title
+    // Video.description = description
+    // Video.thumbnail = uploadThumbnail.url
+
+    // await video.save()
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, updateVideo, "Video details updated successfully"))
 })
 
 const deleteVideo = asynchandler(async (req, res) => {

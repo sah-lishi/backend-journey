@@ -4,7 +4,7 @@ import {User} from "../models/user.model.js"
 import {apiError} from "../utils/apiError.js"
 import {apiResponse} from "../utils/apiResponse.js"
 import {asynchandler} from "../utils/asynchandler.js"
-import {uploadOnCloudinary} from "../utils/cloudinary.js"
+import {uploadOnCloudinary, deleteFromCloudinary} from "../utils/cloudinary.js"
 import { getVideoDurationInSeconds } from "get-video-duration";
 
 const getAllVideos = asynchandler(async (req, res) => {
@@ -83,19 +83,20 @@ const updateVideo = asynchandler(async (req, res) => {
         updatedFields.thumbnail = uploadThumbnail.url
     }
     
+    // object spread operator
+    // let updatedFields ={
+    //     ...(title && {title}),
+    //     ...(description && {description}),
+    //     ...(thumbnail && {thumbnail: (await uploadOnCloudinary(thumbnail))?.url})
+    // }
+
     const updateVideo = await Video.findByIdAndUpdate(
         videoId, updatedFields, {new: true})
     
     if (!updateVideo) {
         throw new apiError(404, "Video not found")
     }    
-    // const video = await Video.findById(videoId)
-    // Video.title = title
-    // Video.description = description
-    // Video.thumbnail = uploadThumbnail.url
-
-    // await video.save()
-
+    
     return res
     .status(200)
     .json(new apiResponse(200, updateVideo, "Video details updated successfully"))
@@ -104,6 +105,43 @@ const updateVideo = asynchandler(async (req, res) => {
 const deleteVideo = asynchandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: delete video
+    const video = await Video.findById(videoId)
+
+    if (!video) {
+        throw new apiError(404,"Video not found")
+    }
+    const urlParts = video.videoFile.split("/");
+    const filename = urlParts[urlParts.length - 1]; // e.g. myvideo.mp4
+    const publicId = urlParts.slice(urlParts.indexOf("upload") + 1).join("/").replace(/\.[^/.]+$/, "");  
+
+    // delete from cloudinary
+    if (video.publicId) {
+        await deleteFromCloudinary(video.publicId, "video")
+    }
+    // delete from db
+    await Video.findByIdAndDelete(videoId)
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, {}, "Video deleted successfully"))
+})
+const getpublicId= asynchandler(async (req, res) => {
+    const {videoId} = req.params
+    const video = await Video.findById(videoId)
+
+    if (!video) {
+        throw new apiError(404,"Video not found")
+    }
+    const urlParts = video.videoFile.split("/");
+    const filename = urlParts[urlParts.length - 1]; // e.g. myvideo.mp4
+    const publicId = urlParts.slice(urlParts.indexOf("upload") + 1).join("/").replace(/\.[^/.]+$/, "");  
+
+    if (!publicId) {
+        throw new apiError(300, "no public id")
+    }
+    return res
+    .status(200)
+    .json(new apiResponse(200, publicId, "Got publicId successfully"))
 })
 
 const togglePublishStatus = asynchandler(async (req, res) => {
@@ -116,5 +154,6 @@ export {
     getVideoById,
     updateVideo,
     deleteVideo,
-    togglePublishStatus
+    togglePublishStatus,
+    getpublicId
 }

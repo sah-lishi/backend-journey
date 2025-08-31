@@ -36,8 +36,14 @@ const publishAVideo = asynchandler(async (req, res) => {
     }
 
     const newVideo =new Video({
-        videoFile: uploadVideo.url,
-        thumbnail: uploadThumbnail.url, 
+        videoFile: {
+            url: uploadVideo.secure_url,
+            public_id: uploadVideo.public_id
+        },
+        thumbnail: {
+            url: uploadThumbnail.secure_url,
+            public_id: uploadThumbnail.public_id
+        },
         title, 
         description, 
         duration: duration,
@@ -104,19 +110,23 @@ const updateVideo = asynchandler(async (req, res) => {
 
 const deleteVideo = asynchandler(async (req, res) => {
     const { videoId } = req.params
+    const userId = req.user._id
     //TODO: delete video
     const video = await Video.findById(videoId)
 
     if (!video) {
         throw new apiError(404,"Video not found")
     }
-    const urlParts = video.videoFile.split("/");
-    const filename = urlParts[urlParts.length - 1]; // e.g. myvideo.mp4
-    const publicId = urlParts.slice(urlParts.indexOf("upload") + 1).join("/").replace(/\.[^/.]+$/, "");  
-
+    if(video.owner.toString() !== userId.toString()){
+        throw new apiError(400, "Unauthorixed to delete the video")
+    }
+    
     // delete from cloudinary
-    if (video.publicId) {
-        await deleteFromCloudinary(video.publicId, "video")
+    if (video.videoFile.public_id) {
+        await deleteFromCloudinary(video.videoFile.public_id, "video")
+    }
+    if (video.thumbnail.public_id) {
+        await deleteFromCloudinary(video.thumbnail.public_id, "image")
     }
     // delete from db
     await Video.findByIdAndDelete(videoId)

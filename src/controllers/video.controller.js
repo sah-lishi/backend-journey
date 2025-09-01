@@ -27,6 +27,8 @@ const getAllVideos = asynchandler(async (req, res) => {
         sortField = sortBy
     }
 
+    let pageNum = parseInt(page)
+
     const videos = await Video.aggregate([
         // stage 1
         {
@@ -38,7 +40,7 @@ const getAllVideos = asynchandler(async (req, res) => {
         },
         // stage 3
         {
-            $skip: (page - 1) * parseInt(limit),
+            $skip: (pageNum - 1) * parseInt(limit),
         },
         // stage 4
         {

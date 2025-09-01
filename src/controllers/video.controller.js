@@ -162,7 +162,7 @@ const updateVideo = asynchandler(async (req, res) => {
         videoId, updatedFields, {new: true})
     
     if (!updateVideo) {
-        throw new apiError(404, "Video not found")
+        throw new apiError(404, "Video not updated")
     }    
     
     return res

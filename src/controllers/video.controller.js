@@ -47,7 +47,10 @@ const getAllVideos = asynchandler(async (req, res) => {
             $limit: parseInt(limit)
         }
     ])
-    res.status(200).json( new apiResponse(200, videos, "All videos fetched successfully"))
+
+    return res
+    .status(200)
+    .json( new apiResponse(200, videos, "All videos fetched successfully"))
 })
 
 const publishAVideo = asynchandler(async (req, res) => {

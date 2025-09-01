@@ -32,7 +32,7 @@ const getVideoComments = asyncHandler(async (req, res) => {
         }
     ])
 
-    res
+    return res
     .status(200)
     .json(new apiResponse(200, comments, "Comments fetched successfully"))
 })
@@ -57,7 +57,7 @@ const addComment = asyncHandler(async (req, res) => {
     })
     await comment.save()
 
-    res
+    return res
     .status(200)
     .json(new apiResponse(201, comment, "Comment added successfully"))
 })
@@ -82,7 +82,7 @@ const updateComment = asyncHandler(async (req, res) => {
         throw new apiError(500, "Something went wrong while updating comment")
     }
 
-    res
+    return res
     .status(200)
     .json(new apiResponse(200, "Comment updated successfully"))
 })
@@ -97,7 +97,7 @@ const deleteComment = asyncHandler(async (req, res) => {
 
     await Comment.findByIdAndDelete(commentId)
 
-    res
+    return res
     .status(200)
     .json(new apiResponse(200, "Comment deleted successfully"))
 })

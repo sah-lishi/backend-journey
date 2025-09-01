@@ -8,8 +8,44 @@ import {uploadOnCloudinary, deleteFromCloudinary} from "../utils/cloudinary.js"
 import { getVideoDurationInSeconds } from "get-video-duration";
 
 const getAllVideos = asynchandler(async (req, res) => {
-    const { page = 1, limit = 10, query, sortBy, sortType, userId } = req.query
-    //TODO: get all videos based on query, sort, pagination
+    const { page = 1, limit = 10, title = "", sortBy, sortType, userId } = req.query
+    //TODO: 
+    const match = {}
+    if (title) {
+        match.title = {$regex: title, $options: "i"}
+    }
+    if(userId) {
+        match.owner = new mongoose.Types.ObjectId(userId)
+    }
+
+    match.views = { $gte: 2}
+
+    // logic for only allowed sorts
+    const allowedSortFields =[isPublished, views]
+    let sortField = isPublished // default
+    if (sortBy && allowedSortFields.includes(sortBy)) {
+        sortField = sortBy
+    }
+
+    const videos = await Video.aggregate([
+        // stage 1
+        {
+            $match: match,
+        },
+        // stage 2
+        {
+            $sort: {[sortField]: sortType === "desc" ? -1 : 1},
+        },
+        // stage 3
+        {
+            $skip: (page - 1) * parseInt(limit),
+        },
+        // stage 4
+        {
+            $limit: parseInt(limit)
+        }
+    ])
+    res.status(200).json( new apiResponse(200, videos, "All videos fetched successfully"))
 })
 
 const publishAVideo = asynchandler(async (req, res) => {
@@ -61,6 +97,32 @@ const publishAVideo = asynchandler(async (req, res) => {
 const getVideoById = asynchandler(async (req, res) => {
     const { videoId } = req.params
     //TODO: get video by id
+  
+    const video = await Video.findById(videoId)
+    if (!video) {
+        throw new apiError(400, "No such video found")
+    }
+    
+    //get user id
+    const userId = req.user._id
+    const user = await User.findById(userId)
+    
+    // check if the video is present in user watch history, if not then push the video id into watch history and increment view field
+    if(!user.watchHistory.includes(videoId)) {
+        Video.findByIdAndUpdate(videoId,
+            { $inc: { views: 1}}
+        )
+        
+        user.watchHistory.push(videoId)
+        await user.save()
+    }
+
+
+    return res
+    .status(200)
+    .json( 
+        new apiResponse(200, video, "Video fetched successfully")
+    )
 })
 
 const updateVideo = asynchandler(async (req, res) => {
@@ -135,24 +197,6 @@ const deleteVideo = asynchandler(async (req, res) => {
     .status(200)
     .json(new apiResponse(200, {}, "Video deleted successfully"))
 })
-const getpublicId= asynchandler(async (req, res) => {
-    const {videoId} = req.params
-    const video = await Video.findById(videoId)
-
-    if (!video) {
-        throw new apiError(404,"Video not found")
-    }
-    const urlParts = video.videoFile.split("/");
-    const filename = urlParts[urlParts.length - 1]; // e.g. myvideo.mp4
-    const publicId = urlParts.slice(urlParts.indexOf("upload") + 1).join("/").replace(/\.[^/.]+$/, "");  
-
-    if (!publicId) {
-        throw new apiError(300, "no public id")
-    }
-    return res
-    .status(200)
-    .json(new apiResponse(200, publicId, "Got publicId successfully"))
-})
 
 const togglePublishStatus = asynchandler(async (req, res) => {
     const { videoId } = req.params
@@ -165,5 +209,5 @@ export {
     updateVideo,
     deleteVideo,
     togglePublishStatus,
-    getpublicId
+
 }

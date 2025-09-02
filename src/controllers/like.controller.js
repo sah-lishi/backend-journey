@@ -17,16 +17,16 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
         throw new apiError(400, "No video present")
     }
 
-    const existingLike = await Like.findOne({likedBy: req.user._id, videos: videoId})
+    const existingLike = await Like.findOne({likedBy: req.user._id, video: videoId})
 
     if (!existingLike) {
-        await Like.create({videos: videoId, likedBy: req.user._id})
+        await Like.create({video: videoId, likedBy: req.user._id})
         return res
         .status(200)
         .json(new apiResponse(200, "Video liked"))
     }
     else {
-        await Like.deleteOne({videos: videoId, likedBy: req.user._id})
+        await Like.deleteOne({video: videoId, likedBy: req.user._id})
         return res
         .status(200)
         .json(new apiResponse(200, "Video unliked"))
@@ -92,8 +92,30 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
 
 const getLikedVideos = asyncHandler(async (req, res) => {
     //TODO: get all liked videos
-    // if like is more than equal to 1 then fetch that video
     // lookup concept-join
+    const likedVideos = await Video.aggregate([
+        {
+            $lookup: {
+                from: "likes",
+                localField: "_id",
+                foreignField: "video",
+                as: "likedVideo"
+            }
+        },
+        {
+            $match: {
+                "likes.likedBy": new mongoose.Types.ObjectId(req.user._id)
+            }
+        },
+    ])
+
+    if (!likedVideos || likedVideos.length === 0) {
+        throw new apiError(404, "No liked videos found")
+    }
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, likedVideos, "Fetched all liked videos successfully"))
 })
 
 export {

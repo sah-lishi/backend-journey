@@ -1,12 +1,12 @@
 import mongoose, {isValidObjectId} from "mongoose"
 import {Video} from "../models/video.model.js"
 import {Like} from "../models/like.model.js"
-import {Tweet} from "../models/tweets.model.js"
+import {Tweets} from "../models/tweets.model.js"
 import {apiError} from "../utils/apiError.js"
 import {apiResponse} from "../utils/apiResponse.js"
-import {asyncHandler} from "../utils/asynchandler.js"
+import {asynchandler} from "../utils/asynchandler.js"
 
-const toggleVideoLike = asyncHandler(async (req, res) => {
+const toggleVideoLike = asynchandler(async (req, res) => {
     const {videoId} = req.params
     if (!isValidObjectId(videoId)) {
         throw new apiError(400, "Invalid videoId")
@@ -33,7 +33,7 @@ const toggleVideoLike = asyncHandler(async (req, res) => {
     }
 })
 
-const toggleCommentLike = asyncHandler(async (req, res) => {
+const toggleCommentLike = asynchandler(async (req, res) => {
     const {commentId} = req.params
     if (!isValidObjectId(commentId)) {
         throw new apiError(400, "Invalid commentId")
@@ -61,15 +61,15 @@ const toggleCommentLike = asyncHandler(async (req, res) => {
 })
 
 
-const toggleTweetLike = asyncHandler(async (req, res) => {
+const toggleTweetLike = asynchandler(async (req, res) => {
     const {tweetId} = req.params
     //TODO: toggle like on tweet
     
     if (!isValidObjectId(tweetId)) {
-        throw new apiError(400, "Invalid videoId")
+        throw new apiError(400, "Invalid tweetId")
     }
     
-    const tweet = await Tweet.findById(tweetId)
+    const tweet = await Tweets.findById(tweetId)
     if (!tweet) {
         throw new apiError(400, "No video present")
     }
@@ -90,7 +90,7 @@ const toggleTweetLike = asyncHandler(async (req, res) => {
     }
 })
 
-const getLikedVideos = asyncHandler(async (req, res) => {
+const getLikedVideos = asynchandler(async (req, res) => {
     //TODO: get all liked videos
     // lookup concept-join
     const likedVideos = await Video.aggregate([

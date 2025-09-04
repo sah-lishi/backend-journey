@@ -64,35 +64,50 @@ const getPlaylistById = asynchandler(async (req, res) => {
     //     }
     // ])
 
-    await Playlist.aggregate([
-        {
-            $match: {_id: new mongoose.Types.ObjectId(playlistId)}
-        },
-        {
-            $lookup: {
-                from: "",
-                let: {},
-                pipeline: [
-                    {
-                        $match:{
+    // const aPlaylist = await Playlist.aggregate([
+    //     {
+    //         $match: {_id: new mongoose.Types.ObjectId(playlistId)}
+    //     },
+    //     {
+    //         $lookup: {
+    //             from: "videos",
+    //             let: {videoIds: "$videos"},
+    //             pipeline: [
+    //                 {
+    //                     $match:{
+    //                         $expr: {$in: ["$_id", "$$videoIds"] }            
+    //                     }
+    //                 },
+    //                 {
+    //                     $sort: {createdAt: -1}
+    //                 },
+                    
+    //             ],
+    //             as: "videos",
+    //         }
+    //     }
+    // ])
 
-                        }
-                    },
-                    {
-                        $sort: {
-
-                        }
-                    },
-                    {
-                        $project: {
-                            
-                        }
+    // replace the $lookup with .populate()
+    const aPlaylist = await Playlist
+        .findById(playlistId)
+        .populate(
+            {
+                path: "videos",
+                options: {
+                        $sort: {createdAt: -1}
                     }
-                ],
-                as: "",
             }
-        }
-    ])
+        )
+
+    // aggregate() always returns an array
+    if (!aPlaylist || aPlaylist.length === 0) {
+        throw new apiError(500, "Error occured while fetching playlist")
+    }
+
+    return res
+    .status(200)
+    .json(new apiResponse(200, aPlaylist, "Playlist fetched successfully"))
 
 })
 

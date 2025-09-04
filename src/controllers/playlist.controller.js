@@ -38,14 +38,26 @@ const createPlaylist = asynchandler(async (req, res) => {
 })
 
 const getUserPlaylists = asynchandler(async (req, res) => {
-    const {userId} = req.params
+    const {page = 1, limit = 10, userId} = req.params
     //TODO: get user playlists
     if (!isValidObjectId(userId)) {
         throw new apiError(400, "Invalid playlistId")
     }
+
+    const pageNum = parseInt(page)
+    
     const allPlaylist = await Playlist.aggregate([
         {
             $match: {owner: new mongoose.Types.ObjectId(userId)}
+        },
+        {
+            $sort: {createdAt: -1},
+        },
+        {
+            $skip: (pageNum - 1) * parseInt(limit),
+        },
+        {
+            $limit: parseInt(limit)
         }
     ])
 
